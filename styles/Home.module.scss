@@ -1,0 +1,153 @@
+@import "./variables.scss";
+
+.header__wrap {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  height: 4.28rem;
+  padding: 0.71rem;
+  color: $color-title;
+  background-color: $color-main;
+
+  span.title {
+    font-size: 2rem;
+    cursor: pointer;
+  }
+}
+
+nav.navigator {
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  width: 100%;
+  max-width: 100%;
+  padding: 0.2rem;
+  overflow: auto;
+  background-color: $color-sub;
+
+  div.nav__wrap {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-evenly;
+
+    a {
+      padding: 0.5rem;
+      font-size: 1.2rem;
+      color: $color-item;
+
+      &.focus,
+      &:hover {
+        color: $color-item-select;
+      }
+    }
+  }
+}
+
+section.section {
+  width: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  color: $color-text-main;
+  background-color: white;
+
+  .section__wrap {
+    width: 100%;
+    min-width: 1080px;
+    max-width: 1920px;
+    min-height: 100%;
+    padding: 1rem 0.6rem;
+    background-color: $color-background;
+
+    .movie__list {
+      min-width: 1080px;
+      max-width: 1920px;
+      width: 100%;
+      display: grid;
+      justify-items: center;
+      grid-template-columns: repeat(auto-fit, minmax(360px, auto));
+      gap: 10px;
+
+      .movie__wrap {
+        width: 360px;
+        height: 240px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: row;
+        border: 2px solid #0e1f36;
+        box-sizing: border-box;
+        background-color: #091423;
+        transition: transform 0.5s;
+
+        .movie__poster {
+          position: relative;
+          min-width: 160px;
+          height: 100%;
+          background-color: white;
+
+          img {
+            object-fit: fill; // contain
+            object-position: center;
+            transition: transform 0.5s;
+          }
+
+          .movie__score {
+            position: absolute;
+            right: 5px;
+            bottom: 5px;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-sizing: border-box;
+            border: 1px solid white;
+            border-radius: 100%;
+            background-color: gray;
+            transition: opacity 0.5s;
+
+            span {
+              line-height: 100%;
+              vertical-align: middle;
+            }
+          }
+
+          &:hover {
+            .movie__score {
+              opacity: 0.2;
+              transition: opacity 0.5s;
+            }
+          }
+        }
+
+        .movie__detail {
+          padding: 1rem;
+
+          .movie__title {
+            font-size: 1.4rem;
+          }
+
+          .movie__date {
+            font-size: 1rem;
+            color: $color-text-sub;
+          }
+        }
+
+        &:hover {
+          border: 2px solid #0e1f36;
+          background-color: #0f213a;
+          transition: transform 0.5s;
+
+          .movie__poster {
+            img {
+              transform: scale(1.05);
+            }
+          }
+        }
+      }
+    }
+  }
+}
