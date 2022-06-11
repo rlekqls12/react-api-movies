@@ -33,10 +33,11 @@ export default async function handler(
   const query = req.query;
 
   try {
-    // TODO: paging, 정렬 같은 옵션 처리도 하기
+    // TODO: 정렬 같은 옵션 처리도 하기
     const response = await SERVER_API.get<ResponseData>("/discover/movie", {
       params: {
         with_genres: query.list_id,
+        page: query.page || 1,
       },
     });
     res.status(200).json(response.data);

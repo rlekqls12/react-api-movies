@@ -1,12 +1,11 @@
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import type { NextPage, NextPageContext } from "next";
 import { useRouter } from "next/router";
-import Image from "next/image";
 import Link from "next/link";
 import cx from "classnames";
 import styles from "@/styles/Home.module.scss";
 import API from "@/utils/api";
-import TMDBImage from "@/components/common/TMDBImage";
+import MovieCard from "@/components/common/MovieCard";
 
 type Props = {
   serverData: ServerData;
@@ -41,7 +40,7 @@ type Movie = {
   vote_count: number;
   popularity: number;
   genre_ids: number[];
-  genre_texts: string[];
+  genres: { id: number; text: string }[];
   original_language: string;
   original_title: string;
   adult: boolean;
@@ -52,6 +51,22 @@ const Home: NextPage<Props> = ({ serverData }) => {
   const router = useRouter();
   console.log("ServerData :", serverData);
   console.log("Router :", router);
+
+  // Functions
+
+  const onClickGenrePill = useCallback(
+    (genreId: number) => {
+      router.push({
+        query: {
+          genre: genreId,
+          page: 1,
+        },
+      });
+    },
+    [router]
+  );
+
+  // Elements
 
   const GenresElement = useMemo(() => {
     return serverData.genres.map((genre) => (
@@ -70,47 +85,35 @@ const Home: NextPage<Props> = ({ serverData }) => {
   const MovieList = useMemo(() => {
     const movies = serverData.movie.results;
     return movies.map((movie) => (
-      <div key={movie.id} className={styles.movie__wrap}>
-        <div className={styles.movie__poster}>
-          <TMDBImage
-            layout="fill"
-            placeholder="blur"
-            srcSize="w400"
-            blurSize="w200"
-            alt={movie.title}
-            src={movie.poster_path}
-            blurDataURL={movie.poster_path}
-          />
-        </div>
-        <div className={styles.movie__detail}>
-          <div className={styles.movie__score}>{movie.score}</div>
-          <div className={styles.movie__title}>{movie.title}</div>
-          <div className={styles.movie__date}>{movie.release_date}</div>
-          <div className={styles.movie__genre}>
-            {movie.genre_texts.map((text) => (
-              <span key={text} className={styles.movie__pill}>
-                {text}
-              </span>
-            ))}
-          </div>
-        </div>
-      </div>
+      <MovieCard
+        key={movie.id}
+        movie={movie}
+        onClickGenrePill={onClickGenrePill}
+      />
     ));
-  }, [serverData.movie]);
+  }, [serverData.movie, onClickGenrePill]);
 
-  // TODO: MovieList가 표시되면 Nav가 가려짐 (한 줄에 영화가 4개 이하가 되면 사라짐)
-  // TODO: genre에서 id로 랜덤 색상 추출해서 pill에 배경색 넣기 (lux 조절해서 색감 너무 어둡거나 안 쨍하게 하기) (글자 색상도 배경에 맞춰서 블랙이나 화이트로 조절하기)
+  // TODO: api configuration 참고해서 블러썸네일 사이즈 최적으로 맞추기
+  // TODO: 페이지네이션 / 페이지당 개수
+  // TODO: 정렬 및 검색 옵션
 
   return (
     <>
       <header className={styles.header__wrap}>
-        <span className={styles.title}>Movies</span>
+        <div className={styles.title}>Movies</div>
+        <nav className={styles.navigator}>
+          <div className={styles.nav__scroll_wrap}>
+            <div className={styles.nav__genre__wrap}>{GenresElement}</div>
+          </div>
+        </nav>
       </header>
-      <nav className={styles.navigator}>
-        <div className={styles.nav__wrap}>{GenresElement}</div>
-      </nav>
       <section className={styles.section}>
-        <div className={styles.section__wrap}>
+        <div className={styles.movie__list__wrap}>
+          <div className={styles.movie__toolbar}>
+            <div className={styles.movie__pagination}>
+              &lt; 1 2 3 4 Pagination 5 6 7 8 &gt;
+            </div>
+          </div>
           <div className={styles.movie__list}>{MovieList}</div>
         </div>
       </section>
@@ -140,29 +143,49 @@ export async function getServerSideProps(context: NextPageContext) {
     /* 영화 목록 조회 */
     // query에서 장르 타입 가져오기 (기본 값 액션)
     const genre = query.genre || serverData.genres?.[0].id || 28;
-    const res = await API.get("/list/genre/movie/" + genre);
-    const data: MovieBoard = res.data;
+    // query에서 페이지 가져오기 (기본 값 1)
+    const rawPage = Array.isArray(query.page) ? query.page?.[0] : query.page;
+    const page = parseInt(rawPage || "1") || 1;
 
-    // 장르 id를 장르 문자열로 바꿔주는 오브젝트 생성 (ex 28 -> 액션)
-    const idToGenre: { [key: string]: string } = {};
-    const genres = serverData.genres || [];
-    genres.forEach((genre) => {
-      idToGenre[genre.id] = genre.name;
-    });
-    const isExistGenre = Boolean(genres.length);
-    // 영화 목록에 추가적인 작업 진행
-    // (날짜 형식 변경, 평점을 점수 형식으로 변경, 장르 id 목록을 문자열 목록으로 변경)
-    data.results.forEach((movie: Movie) => {
-      movie.release_date = movie.release_date.replace(/-/g, ". ");
-      movie.score = movie.vote_average * 10;
-      movie.genre_texts = [];
-      if (isExistGenre) {
-        movie.genre_texts = movie.genre_ids
-          .map((id) => idToGenre[id])
-          .filter(Boolean);
-      }
-    });
-    serverData.movie = data;
+    const getMovies = async (page: number) => {
+      const res = await API.get("/list/genre/movie/" + genre, {
+        params: { page },
+      });
+      const data: MovieBoard = res.data;
+
+      // 장르 id를 장르 문자열로 바꿔주는 오브젝트 생성 (ex 28 -> 액션)
+      const genreIdToText: { [key: string]: string } = {};
+      const genres = serverData.genres || [];
+      genres.forEach((genre) => {
+        genreIdToText[genre.id] = genre.name;
+      });
+      const isExistGenre = Boolean(genres.length);
+      // 영화 목록에 추가적인 작업 진행
+      // (날짜 형식 변경, 평점을 점수 형식으로 변경, 장르 id 목록을 문자열 목록으로 변경)
+      data.results.forEach((movie: Movie) => {
+        movie.release_date = movie.release_date.replace(/-/g, ". ");
+        movie.score = movie.vote_average * 10;
+        if (isExistGenre) {
+          movie.genres = movie.genre_ids
+            .map((id) => ({
+              id: id,
+              text: genreIdToText[id],
+            }))
+            .filter(Boolean);
+        } else {
+          movie.genres = [];
+        }
+      });
+
+      return data;
+    };
+
+    const movie = await getMovies(page);
+    // TODO: Multiple Page
+    // const nextPageMovie = await getMovies(page + 1);
+    // movie.results.push(...nextPageMovie.results);
+
+    serverData.movie = movie;
   } catch {}
 
   return {
